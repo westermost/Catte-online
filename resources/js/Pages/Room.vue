@@ -25,7 +25,6 @@ const copied = ref(false);
 const nextGameSecondsLeft = ref(0);
 const showCompletedGameView = ref(false);
 const completedGameSnapshot = ref(null);
-const GAME_RESULT_MODAL_VISIBLE_MS = 6000;
 const FINAL_REVEAL_DELAY_MS = 5000;
 let channel = null;
 let statePollTimer = null;
@@ -222,11 +221,6 @@ async function readyNextGame() {
     }
 }
 
-async function returnToRoom() {
-    showCompletedGameView.value = false;
-    await refreshRoomState();
-}
-
 async function handlePlayCard({ card, face_down }) {
     try {
         const token = document.querySelector('meta[name="csrf-token"]')?.content;
@@ -312,6 +306,10 @@ async function handleReadyNextGame() {
     await readyNextGame();
 }
 
+function handleLeaveRoom() {
+    leaveRoom();
+}
+
 function copyCode() {
     if (!roomData.value.code) return;
     navigator.clipboard.writeText(roomData.value.code);
@@ -337,7 +335,7 @@ function copyCode() {
             @play-card="handlePlayCard"
             @claim-timeout="handleClaimTimeout"
             @ready-next-game="handleReadyNextGame"
-            @return-to-room="returnToRoom"
+            @leave-room="handleLeaveRoom"
         />
 
 

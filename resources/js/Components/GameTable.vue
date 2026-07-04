@@ -15,7 +15,7 @@ const props = defineProps({
     readyPlayersCount: { type: Number, default: 0 },
 });
 
-const emit = defineEmits(['play-card', 'claim-timeout', 'return-to-room', 'ready-next-game']);
+const emit = defineEmits(['play-card', 'claim-timeout', 'leave-room', 'ready-next-game']);
 
 const myHand = ref([]);
 const selectedCard = ref(null);
@@ -271,7 +271,11 @@ function listenEvents() {
 
     channel.listen('GameEnded', (e) => {
         if (Array.isArray(e.table_plays) && e.table_plays.length > 0 && e.final_round_number) {
-            upsertWinningPlay(e.final_round_number, e.table_plays, e.winner_id, true);
+            if (Number(e.final_round_number) >= 6) {
+                upsertRoundPlays(e.final_round_number, e.table_plays, true, e.winner_id);
+            } else {
+                upsertWinningPlay(e.final_round_number, e.table_plays, e.winner_id, true);
+            }
         }
 
         gameResult.value = e;
@@ -383,11 +387,12 @@ function upsertTablePlay(roundNumber, play) {
     tableRounds.value = [...tableRounds.value].sort((left, right) => left.roundNumber - right.roundNumber);
 }
 
-function upsertRoundPlays(roundNumber, plays, revealCards = false) {
+function upsertRoundPlays(roundNumber, plays, revealCards = false, winnerId = null) {
     const numericRound = Number(roundNumber);
     const group = ensureRoundGroup(numericRound);
+    group.winnerId = winnerId !== null ? Number(winnerId) : group.winnerId;
     group.plays = plays
-        .map((play, index) => normalizePlay(numericRound, play, index, revealCards))
+        .map((play, index) => normalizePlay(numericRound, play, index, revealCards, group.winnerId))
         .sort((left, right) => left.play_order - right.play_order);
 
     tableRounds.value = [...tableRounds.value].sort((left, right) => left.roundNumber - right.roundNumber);
@@ -401,11 +406,11 @@ function upsertWinningPlay(roundNumber, plays, winnerId, revealCards = false) {
     const winningPlay = (plays || []).find(play => Number(play.player_id) === Number(winnerId));
 
     if (!winningPlay) {
-        upsertRoundPlays(roundNumber, [], revealCards);
+        upsertRoundPlays(roundNumber, [], revealCards, winnerId);
         return;
     }
 
-    upsertRoundPlays(roundNumber, [winningPlay], revealCards);
+    upsertRoundPlays(roundNumber, [winningPlay], revealCards, winnerId);
 }
 
 function ensureRoundGroup(roundNumber) {
@@ -417,6 +422,7 @@ function ensureRoundGroup(roundNumber) {
             roundNumber,
             label: `VÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â²ng ${roundNumber}`,
             plays: [],
+            winnerId: null,
         };
         tableRounds.value.push(group);
     }
@@ -424,7 +430,7 @@ function ensureRoundGroup(roundNumber) {
     return group;
 }
 
-function normalizePlay(roundNumber, play, index, revealCards) {
+function normalizePlay(roundNumber, play, index, revealCards, winnerId = null) {
     const playOrder = Number(play.play_order || index + 1);
     const isFaceDown = revealCards ? false : Boolean(play.is_face_down);
 
@@ -434,6 +440,7 @@ function normalizePlay(roundNumber, play, index, revealCards) {
         card: play.card,
         is_face_down: isFaceDown,
         play_order: playOrder,
+        is_winner: winnerId !== null && Number(play.player_id) === Number(winnerId),
     };
 }
 
@@ -461,12 +468,12 @@ function resetTableState() {
     }
 }
 
-function returnToRoom() {
-    emit('return-to-room');
-}
-
 function readyNextGame() {
     emit('ready-next-game');
+}
+
+function leaveRoom() {
+    emit('leave-room');
 }
 
 async function refreshFromServer() {
@@ -526,9 +533,9 @@ defineExpose({ updateHand, addPlayedCard, refreshFromServer });
                     <button
                         type="button"
                         class="result-action result-action--secondary"
-                        @click="returnToRoom"
+                        @click="leaveRoom"
                     >
-                        Quay lai phong cho
+                        Thoat phong
                     </button>
                     <button
                         type="button"
@@ -583,6 +590,7 @@ defineExpose({ updateHand, addPlayedCard, refreshFromServer });
                                     :class="{
                                         'winner-mini-card--red': isRedCard(play.card),
                                         'winner-mini-card--back': play.is_face_down || !play.card,
+                                        'winner-mini-card--winner': play.is_winner,
                                     }"
                                 >
                                     <template v-if="play.is_face_down || !play.card">
@@ -865,6 +873,24 @@ defineExpose({ updateHand, addPlayedCard, refreshFromServer });
     background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
     border-color: rgba(217, 119, 6, 0.75);
     color: #fbbf24;
+}
+
+.winner-mini-card--winner {
+    border-color: rgba(250, 204, 21, 0.95);
+    box-shadow:
+        0 0 0 2px rgba(250, 204, 21, 0.45),
+        0 12px 24px rgba(250, 204, 21, 0.24),
+        0 8px 16px rgba(0, 0, 0, 0.32);
+    animation: winner-card-pulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes winner-card-pulse {
+    from {
+        filter: brightness(1);
+    }
+    to {
+        filter: brightness(1.08);
+    }
 }
 
 .winner-mini-card__rank {
