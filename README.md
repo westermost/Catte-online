@@ -1,58 +1,162 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 🃏 Catte Online
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Game đánh bài **Cát Tê** online realtime, hỗ trợ 2-6 người chơi.
 
-## About Laravel
+## Tech Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Vue 3 + Inertia.js + Tailwind CSS 4 |
+| Backend | Laravel 13 + PHP 8.4 |
+| Realtime | Pusher (WebSocket) + Laravel Echo |
+| Database | SQLite (dev) / MySQL (prod) |
+| Animations | GSAP |
+| Sound | Howler.js |
+| Hosting | Shared hosting (Hostinger) |
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Features
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- 🎮 **2-6 người chơi** realtime trong cùng phòng
+- 🏠 **Hệ thống phòng** — Lobby công khai + phòng riêng bằng mã 6 ký tự
+- 👤 **Guest system** — Không cần đăng ký, chỉ nhập tên vào chơi
+- 🔄 **Reconnect** — Cookie-based recovery khi mất kết nối
+- 🃏 **Luật Cát Tê đầy đủ** — 6 vòng trick-taking, thắng trắng, gục tùng, thắng tùng, chưng
+- ⏱️ **Timer 30s/lượt** — Auto-kick sau 2 lần timeout liên tiếp
+- 💬 **Chat + Reactions** — Text chat + emoji nhanh (👍😂😡😢🎉🤔)
+- 📊 **Bảng điểm** — Live scoreboard, download CSV/PNG
+- 🎴 **Luật thối Ách** — Toggle on/off bởi chủ phòng
+- 🎨 **Card UI** — CSS playing cards với animations
 
-## Learning Laravel
+## Luật chơi
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### Thắng trắng (Instant Win)
+Kiểm tra ngay sau chia bài:
+1. **Tứ quý** — 4 lá cùng rank
+2. **6 lá cùng chất** — Flush 6
+3. **6 lá nhỏ hơn 6** — Tất cả rank ≤ 5
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Vòng 1-4: Trick-taking
+- Người dẫn đánh 1 lá ngửa (lead card)
+- Người tiếp theo: **đánh ngửa** (cùng chất + lớn hơn) hoặc **thiệp** (úp bất kỳ)
+- Lá ngửa lớn nhất cùng lead suit thắng → có "tồn"
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+### Sau vòng 4
+- **Gục tùng**: 0 tồn → bị loại (-1 điểm)
+- **Thắng tùng**: Chỉ 1 người có tồn → thắng (+2 điểm)
+- Còn ≥2 người → vào **Chưng** (vòng 5-6)
 
-## Agentic Development
+### Vòng 6: Quyết định
+- Người thắng vòng 6 = thắng ván (+1 điểm)
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+### Thối Ách
+- Khi bật: -1 mỗi Ace còn trên tay khi gục tùng
+
+## Setup Development
+
+### Prerequisites
+- PHP 8.3+
+- Composer
+- Node.js 18+
+- NPM
+
+### Installation
 
 ```bash
-composer require laravel/boost --dev
+# Clone & install
+git clone <repo-url> catte
+cd catte
+composer install
+npm install
 
-php artisan boost:install
+# Environment
+cp .env.example .env
+php artisan key:generate
+
+# Database
+php artisan migrate
+
+# Run
+composer dev
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Mở http://localhost:8000
 
-## Contributing
+### Pusher Setup
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+1. Tạo app tại [pusher.com](https://pusher.com)
+2. Copy keys vào `.env`:
 
-## Code of Conduct
+```env
+PUSHER_APP_ID=your-app-id
+PUSHER_APP_KEY=your-app-key
+PUSHER_APP_SECRET=your-app-secret
+PUSHER_APP_CLUSTER=ap1
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Production Deployment (Hostinger)
 
-## Security Vulnerabilities
+```bash
+# Build assets
+npm run build
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+# Optimize Laravel
+composer install --no-dev --optimize-autoloader
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+# Migrate
+php artisan migrate --force
+```
+
+### Cron (cPanel)
+```
+* * * * * cd /path-to-project && php artisan schedule:run >> /dev/null 2>&1
+```
+
+### .env Production
+```env
+APP_ENV=production
+APP_DEBUG=false
+QUEUE_CONNECTION=sync
+SESSION_DRIVER=database
+BROADCAST_CONNECTION=pusher
+```
+
+## Project Structure
+
+```
+app/
+├── Events/              # 14 broadcast events
+├── Http/
+│   ├── Controllers/     # Guest, Room, Game controllers
+│   └── Middleware/      # EnsureGuestSession, HandleInertiaRequests
+├── Models/              # Room, Player, Score, Game, Round, Play
+└── Services/
+    └── CatteGameEngine.php   # Core game logic (545 lines)
+
+resources/js/
+├── Components/          # Card, CardHand, PlayerSeat, GameTable,
+│                        # CountdownTimer, ChatBox, Scoreboard
+├── Pages/               # Home, Lobby, Room
+└── Services/
+    └── SoundManager.js  # Howler.js wrapper
+```
+
+## Testing
+
+```bash
+php artisan test
+```
+
+22 tests, 49 assertions covering:
+- Card deck building & dealing
+- Instant win detection (tứ quý, flush 6, low 6)
+- Trick-taking validation & round evaluation
+- Post-round-4 logic (gục tùng, thắng tùng)
+- Scoring (thối Ách, tùng, normal win)
+- Auto-play (timeout card selection)
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+MIT
