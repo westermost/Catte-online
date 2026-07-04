@@ -1,4 +1,4 @@
-Tôi cần bạn lên plan và nghiên để tạo 1 con game đánh bài Catte online vui vẻ.
+Tìm hiTìmsddTôi cần bạn lên plan và nghiên để tạo 1 con game đánh bài Catte online vui vẻ.
 Có thể chạy trên Share Hosting.
 
 Tech Stack mong muốn (bạn review khả thi hay không)

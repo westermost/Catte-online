@@ -153,3 +153,23 @@ Without this, reactive refs initialized from props won't update on Inertia navig
 - Cron: `* * * * * php artisan schedule:run`
 - Build: `npm run build` → `public/build/`
 - No WebSocket server on host — Pusher handles all client push
+
+## Known Gotchas
+
+### diffInSeconds tính ngược
+`now()->diffInSeconds($game->turn_started_at)` trả về giá trị tuyệt đối nhưng trong một số case Carbon tính ngược (tương lai - quá khứ). Đã fix bằng cách đảm bảo thứ tự đúng tại `GameController.php:160`.
+
+### getNextSeatPosition phải check tất cả status
+UNIQUE constraint `(room_id, seat_position)` áp dụng cho TẤT CẢ rows. Query chỉ check `connected`/`disconnected` sẽ miss seats bị giữ bởi `eliminated`/`kicked` players. Fix: exclude chỉ `left`.
+
+### Client watchdog cho timeout
+Client có watchdog tự claim timeout lại nếu turn bị stale (`GameTable.vue:294`). Đảm bảo game không bị stuck nếu claim đầu tiên fail.
+
+## Remaining Work / TODO
+
+1. **Manual QA realtime** — test 2-4 browser tabs: join, start, play, timeout, leave, reconnect
+2. **Verify cron production** — `forceTimeout` chỉ chạy nếu scheduler mỗi phút hoạt động
+3. **Verify Pusher production** — app key, cluster, private channel auth, HTTPS/cookie
+4. **Commit/push** — working tree có nhiều file modified sau fixes
+5. **Thêm tests** — forceTimeout cron, rời phòng giữa ván, round 5/6 reveal, tính điểm UI
+6. **QA responsive** — mobile + màn hình nhiều người chơi sau đại tu bàn bài
