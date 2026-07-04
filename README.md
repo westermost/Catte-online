@@ -2,6 +2,8 @@
 
 Game đánh bài **Cát Tê** online realtime, hỗ trợ 2-6 người chơi.
 
+> LÆ°u Ã½: ÄÃ¢y lÃ  **project há»c táº­p / demo**, phá»¥c vá»¥ nghiÃªn cá»©u, thá»±c hÃ nh vÃ  thá»­ nghiá»‡m gameplay realtime.
+
 ## Tech Stack
 
 | Layer | Technology |
