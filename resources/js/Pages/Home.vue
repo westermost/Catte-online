@@ -41,7 +41,7 @@ function submit() {
                 <h1 class="text-3xl font-extrabold tracking-tight text-white mb-2 bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300 bg-clip-text text-transparent">
                     CATTE ONLINE
                 </h1>
-                <p class="text-slate-400 text-sm font-medium">Trải nghiệm game bài Cát Tê đẳng cấp</p>
+                <p class="text-slate-400 text-sm font-medium">Đây chỉ là dự án học tập về lập trình.</p>
             </div>
 
             <form @submit.prevent="submit" class="space-y-6">
