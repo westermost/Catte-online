@@ -1,0 +1,16 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Serve existing files/directories from the project root as-is.
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # If the requested file exists under /public, serve it from there.
+    RewriteCond %{DOCUMENT_ROOT}/public/$1 -f [OR]
+    RewriteCond %{DOCUMENT_ROOT}/public/$1 -d
+    RewriteRule ^(.*)$ public/$1 [L]
+
+    # Otherwise send the request through Laravel's front controller in /public.
+    RewriteRule ^(.*)$ public/index.php [L]
+</IfModule>
