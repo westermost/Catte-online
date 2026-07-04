@@ -23,6 +23,8 @@ const gameTableRef = ref(null);
 const errorMessage = ref('');
 const copied = ref(false);
 const nextGameSecondsLeft = ref(0);
+const showCompletedGameView = ref(false);
+const completedGameSnapshot = ref(null);
 const GAME_RESULT_MODAL_VISIBLE_MS = 6000;
 const FINAL_REVEAL_DELAY_MS = 5000;
 let channel = null;
@@ -35,15 +37,17 @@ let nextGameCountdownTimer = null;
 watch(() => props.players, (val) => { playerList.value = [...val]; });
 watch(() => props.room, (val) => { roomData.value = { ...val }; });
 watch(() => props.isOwner, (val) => { ownerIsMe.value = val; });
-watch(() => props.game, (val) => { activeGame.value = val; });
+watch(() => props.game, (val) => { activeGame.value = val; if (val) { completedGameSnapshot.value = null; showCompletedGameView.value = false; } });
 watch(() => page.props.lastWinner, (val) => { lastWinner.value = val || null; });
 
 const isPlaying = computed(() => roomData.value.status === 'playing' && activeGame.value);
+const displayGame = computed(() => activeGame.value || completedGameSnapshot.value);
+const showGameTable = computed(() => Boolean((isPlaying.value && activeGame.value) || showCompletedGameView.value));
 const currentRoomPlayer = computed(() => playerList.value.find(p => p.id === props.currentPlayer?.id) || null);
 const isNextGameReadyPhase = computed(() => Boolean(roomData.value.next_game_deadline_at));
 const isCurrentPlayerReady = computed(() => Boolean(currentRoomPlayer.value?.ready_for_next_game));
 const readyPlayersCount = computed(() => playerList.value.filter(p => p.ready_for_next_game).length);
-const nextGameLeaderName = computed(() => lastWinner.value?.name || 'người thắng ván trước');
+const nextGameLeaderName = computed(() => lastWinner.value?.name || 'ngÃƒÆ’Ã¢â‚¬Â Ãƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Âi thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¯ng vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡n trÃƒÆ’Ã¢â‚¬Â Ãƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Âºc');
 
 onMounted(() => {
     document.addEventListener('keydown', handleModalKeydown);
@@ -77,15 +81,18 @@ onMounted(() => {
             const player = playerList.value.find(p => p.id === e.player_id);
             if (player) player.status = 'kicked';
         })
-        .listen('GameStarting', (e) => {
+        .listen('GameStarting', () => {
+            showCompletedGameView.value = false;
+            completedGameSnapshot.value = null;
             refreshRoomState();
         })
         .listen('GameEnded', () => {
+            completedGameSnapshot.value = activeGame.value ? { ...activeGame.value } : completedGameSnapshot.value;
+            showCompletedGameView.value = true;
             window.setTimeout(() => {
                 refreshRoomState();
-            }, FINAL_REVEAL_DELAY_MS + GAME_RESULT_MODAL_VISIBLE_MS);
+            }, FINAL_REVEAL_DELAY_MS);
         });
-
     refreshRoomState();
     statePollTimer = window.setInterval(() => {
         if (!isPlaying.value) refreshRoomState();
@@ -127,14 +134,14 @@ function handleModalKeydown(event) {
 }
 
 function showError(message) {
-    errorMessage.value = message || 'Lỗi';
+    errorMessage.value = message || 'LÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Âi';
 }
 
 function closeError() {
     errorMessage.value = '';
 }
 
-async function readErrorResponse(response, fallback = 'Có lỗi xảy ra.') {
+async function readErrorResponse(response, fallback = 'CÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ lÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Âi xÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â£y ra.') {
     try {
         const data = await response.json();
         return data.error || data.message || fallback;
@@ -149,6 +156,11 @@ function applyRoomState(state) {
     ownerIsMe.value = state.isOwner;
     activeGame.value = state.game;
     lastWinner.value = state.lastWinner || null;
+
+    if (state.game) {
+        completedGameSnapshot.value = null;
+        showCompletedGameView.value = false;
+    }
 }
 
 async function refreshRoomState() {
@@ -199,18 +211,19 @@ async function readyNextGame() {
         });
 
         if (!res.ok) {
-            showError(await readErrorResponse(res, 'Không thể xác nhận ván mới.'));
+            showError(await readErrorResponse(res, 'KhÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´ng thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€ Ã¢â‚¬â„¢ xÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡c nhÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â­n vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡n mÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Âºi.'));
             return;
         }
 
         await refreshRoomState();
     } catch (e) {
         console.error('Ready next game error:', e);
-        showError('Không thể kết nối máy chủ. Vui lòng thử lại.');
+        showError('KhÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´ng thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€ Ã¢â‚¬â„¢ kÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¿t nÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“i mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡y chÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â§. Vui lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â²ng thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â­ lÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¡i.');
     }
 }
 
 async function returnToRoom() {
+    showCompletedGameView.value = false;
     await refreshRoomState();
 }
 
@@ -224,7 +237,7 @@ async function handlePlayCard({ card, face_down }) {
             body: JSON.stringify({ card, face_down }),
         });
         if (!res.ok) {
-            showError(await readErrorResponse(res, 'Không thể đánh bài.'));
+            showError(await readErrorResponse(res, 'KhÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´ng thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€ Ã¢â‚¬â„¢ ÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡nh bÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â i.'));
         } else {
             const data = await res.json();
             if (!data.card_played) {
@@ -239,7 +252,7 @@ async function handlePlayCard({ card, face_down }) {
         }
     } catch (e) {
         console.error('Play card error:', e);
-        showError('Không thể kết nối máy chủ. Vui lòng thử lại.');
+        showError('KhÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´ng thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€ Ã¢â‚¬â„¢ kÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¿t nÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“i mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡y chÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â§. Vui lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â²ng thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â­ lÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¡i.');
     }
 }
 
@@ -260,7 +273,7 @@ async function handleClaimTimeout({ retried = false } = {}) {
         });
 
         if (!res.ok) {
-            const message = await readErrorResponse(res, 'Không thể xử lý lượt hết giờ.');
+            const message = await readErrorResponse(res, 'KhÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´ng thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€ Ã¢â‚¬â„¢ xÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â­ lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â½ lÃƒÆ’Ã¢â‚¬Â Ãƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â£t hÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¿t giÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â.');
 
             if (message === 'Too early') {
                 if (!retried) {
@@ -283,7 +296,7 @@ async function handleClaimTimeout({ retried = false } = {}) {
     } catch (e) {
         console.error('Claim timeout error:', e);
         if (e.name === 'AbortError') return;
-        showError('Không thể kết nối máy chủ. Vui lòng thử lại.');
+        showError('KhÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´ng thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€ Ã¢â‚¬â„¢ kÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¿t nÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“i mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡y chÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â§. Vui lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â²ng thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â­ lÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¡i.');
     } finally {
         window.clearTimeout(requestTimer);
         timeoutClaimInFlight = false;
@@ -293,6 +306,10 @@ async function handleClaimTimeout({ retried = false } = {}) {
 async function refreshAfterTimeout() {
     await refreshRoomState();
     await gameTableRef.value?.refreshFromServer?.();
+}
+
+async function handleReadyNextGame() {
+    await readyNextGame();
 }
 
 function copyCode() {
@@ -307,16 +324,22 @@ function copyCode() {
     <div class="min-h-screen bg-slate-950 font-sans text-slate-100 select-none">
         <!-- Game Active -->
         <GameTable
-            v-if="isPlaying && activeGame"
+            v-if="showGameTable && displayGame"
             ref="gameTableRef"
-            :game="activeGame"
+            :game="displayGame"
             :players="playerList"
             :current-player="currentPlayer"
             :room-id="room.id"
+            :next-game-deadline-at="roomData.next_game_deadline_at"
+            :next-game-seconds-left="nextGameSecondsLeft"
+            :is-current-player-ready="isCurrentPlayerReady"
+            :ready-players-count="readyPlayersCount"
             @play-card="handlePlayCard"
             @claim-timeout="handleClaimTimeout"
+            @ready-next-game="handleReadyNextGame"
             @return-to-room="returnToRoom"
         />
+
 
         <!-- Waiting Room -->
         <div v-else class="min-h-screen bg-slate-950 relative overflow-hidden p-4 md:p-6 flex items-center justify-center">
@@ -335,24 +358,24 @@ function copyCode() {
                             <div class="flex items-center gap-2 flex-wrap">
                                 <h1 class="text-2xl font-black text-white tracking-wide">{{ roomData.name }}</h1>
                                 <span class="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-400 rounded-md uppercase">
-                                    {{ isNextGameReadyPhase ? 'Sẵn sàng ván mới' : 'Phòng chờ' }}
+                                    {{ isNextGameReadyPhase ? 'SÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Âµn sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â ng vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡n mÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Âºi' : 'PhÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â²ng chÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â' }}
                                 </span>
                                 <span v-if="roomData.thoi_ach_enabled" class="px-2 py-0.5 bg-rose-500/10 border border-rose-500/20 text-[10px] font-bold text-rose-400 rounded-md uppercase">
-                                    🃏 Thối Ách
+                                    ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€ Ã¢â‚¬â„¢Ãƒâ€šÃ‚Â ThÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“i ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âch
                                 </span>
                             </div>
                             <p class="text-xs text-slate-500 mt-1">
-                                {{ isNextGameReadyPhase ? `${nextGameLeaderName} sẽ đi đầu ở ván mới.` : 'Chuẩn bị sẵn sàng để bước vào trận đấu Catte kịch tính' }}
+                                {{ isNextGameReadyPhase ? `${nextGameLeaderName} sÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â½ ÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“i ÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â§u ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€¦Ã‚Â¸ vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡n mÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Âºi.` : 'ChuÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â©n bÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ sÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Âµn sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â ng ÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€ Ã¢â‚¬â„¢ bÃƒÆ’Ã¢â‚¬Â Ãƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Âºc vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â o trÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â­n ÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¥u Catte kÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ch tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­nh' }}
                             </p>
                         </div>
                         
                         <!-- Copy room code -->
                         <div class="flex items-center gap-2">
-                            <span class="text-xs font-semibold text-slate-400">Mã phòng:</span>
+                            <span class="text-xs font-semibold text-slate-400">MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ phÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â²ng:</span>
                             <button
                                 @click="copyCode"
                                 class="font-mono font-extrabold text-emerald-400 hover:text-emerald-300 bg-slate-950 px-3.5 py-1.5 rounded-xl border border-slate-800 flex items-center gap-2 transition duration-200 active:scale-95 group"
-                                title="Bấm để sao chép"
+                                title="BÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¥m ÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€ Ã¢â‚¬â„¢ sao chÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©p"
                             >
                                 <span class="tracking-widest font-black">{{ roomData.code }}</span>
                                 <svg v-if="!copied" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-slate-500 group-hover:text-slate-400 transition">
@@ -372,14 +395,14 @@ function copyCode() {
                 >
                     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                         <div>
-                            <h2 class="text-base font-black text-white">Xác nhận ván tiếp theo</h2>
+                            <h2 class="text-base font-black text-white">XÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡c nhÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â­n vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡n tiÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¿p theo</h2>
                             <p class="text-xs text-slate-400 mt-1">
-                                {{ readyPlayersCount }} / {{ playerList.length }} người đã sẵn sàng. Hết giờ, người chưa xác nhận sẽ bị rời phòng.
+                                {{ readyPlayersCount }} / {{ playerList.length }} ngÃƒÆ’Ã¢â‚¬Â Ãƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Âi ÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ sÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Âµn sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â ng. HÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¿t giÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â, ngÃƒÆ’Ã¢â‚¬Â Ãƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Âi chÃƒÆ’Ã¢â‚¬Â Ãƒâ€šÃ‚Â°a xÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡c nhÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â­n sÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â½ bÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ rÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Âi phÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â²ng.
                             </p>
                         </div>
                         <div class="flex items-center gap-3">
                             <div class="px-4 py-2 rounded-2xl bg-slate-950 border border-slate-800 text-center min-w-[92px]">
-                                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Còn lại</div>
+                                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">CÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â²n lÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¡i</div>
                                 <div class="text-2xl font-black text-amber-400">{{ nextGameSecondsLeft }}</div>
                             </div>
                             <button
@@ -391,7 +414,7 @@ function copyCode() {
                                 :disabled="isCurrentPlayerReady"
                                 @click="readyNextGame"
                             >
-                                {{ isCurrentPlayerReady ? 'Đã sẵn sàng' : 'Bắt đầu ván tiếp theo' }}
+                                {{ isCurrentPlayerReady ? 'ÃƒÆ’Ã¢â‚¬Å¾Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ sÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Âµn sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â ng' : 'BÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¯t ÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â§u vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡n tiÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¿p theo' }}
                             </button>
                         </div>
                     </div>
@@ -401,7 +424,7 @@ function copyCode() {
                 <div class="bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 mb-6 shadow-2xl">
                     <div class="flex items-center justify-between mb-5">
                         <h2 class="font-extrabold text-white text-base flex items-center gap-2">
-                            <span>👥</span> Danh sách bài thủ
+                            <span>ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“Ãƒâ€šÃ‚Â¥</span> Danh sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ch bÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â i thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â§
                         </h2>
                         <span class="text-xs font-bold px-2 py-0.5 bg-slate-950 border border-slate-800 rounded-md text-slate-400">
                             {{ playerList.length }} / {{ roomData.max_players }}
@@ -425,15 +448,15 @@ function copyCode() {
                                 <div class="flex flex-col">
                                     <span class="font-bold text-white text-sm flex items-center gap-1.5">
                                         {{ player.name }}
-                                        <span v-if="player.id === roomData.owner_player_id" class="text-yellow-500 text-sm" title="Chủ phòng">👑</span>
-                                        <span v-if="player.id === currentPlayer?.id" class="px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-[9px] text-emerald-400 font-extrabold rounded">BẠN</span>
+                                        <span v-if="player.id === roomData.owner_player_id" class="text-yellow-500 text-sm" title="ChÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â§ phÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â²ng">ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“</span>
+                                        <span v-if="player.id === currentPlayer?.id" class="px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-[9px] text-emerald-400 font-extrabold rounded">BÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â N</span>
                                     </span>
                                     <span
                                         v-if="isNextGameReadyPhase"
                                         class="mt-1 text-[10px] font-bold uppercase tracking-wider"
                                         :class="player.ready_for_next_game ? 'text-emerald-400' : 'text-slate-500'"
                                     >
-                                        {{ player.ready_for_next_game ? 'Sẵn sàng ván mới' : 'Chưa xác nhận' }}
+                                        {{ player.ready_for_next_game ? 'SÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Âµn sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â ng vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡n mÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Âºi' : 'ChÃƒÆ’Ã¢â‚¬Â Ãƒâ€šÃ‚Â°a xÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡c nhÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â­n' }}
                                     </span>
                                 </div>
                             </div>
@@ -452,7 +475,7 @@ function copyCode() {
                         >
                             <span class="text-xs text-slate-600 font-medium tracking-wide flex items-center gap-2 select-none">
                                 <span class="w-1.5 h-1.5 rounded-full bg-slate-600 animate-ping"></span>
-                                Đang chờ bài thủ tham gia...
+                                ÃƒÆ’Ã¢â‚¬Å¾Ãƒâ€šÃ‚Âang chÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â bÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â i thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â§ tham gia...
                             </span>
                         </div>
                     </div>
@@ -465,28 +488,28 @@ function copyCode() {
                         @click="startGame"
                         class="px-8 py-3.5 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-slate-950 font-black text-base rounded-xl transition duration-300 transform active:scale-95 shadow-lg shadow-amber-500/10 hover:shadow-amber-500/25"
                     >
-                        🎮 Bắt đầu!
+                        ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â½Ãƒâ€šÃ‚Â® BÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¯t ÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â§u!
                     </button>
                     <button
                         v-if="ownerIsMe && playerList.length < 2 && !isNextGameReadyPhase"
                         disabled
                         class="px-8 py-3.5 bg-slate-900 text-slate-600 font-bold text-sm rounded-xl cursor-not-allowed border border-slate-850"
                     >
-                        ⏳ Cần ít nhất 2 người
+                        ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â³ CÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â§n ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­t nhÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¥t 2 ngÃƒÆ’Ã¢â‚¬Â Ãƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Âi
                     </button>
                     <button
                         @click="leaveRoom"
                         class="px-8 py-3.5 bg-slate-900 border border-slate-850 hover:bg-slate-850 hover:border-slate-800 text-rose-400 font-bold rounded-xl transition duration-200 active:scale-95"
-                        title="Rời phòng và quay lại sảnh"
+                        title="RÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Âi phÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â²ng vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  quay lÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¡i sÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â£nh"
                     >
-                        Rời phòng
+                        RÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Âi phÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â²ng
                     </button>
                     <button
                         @click="leaveToHome"
                         class="px-8 py-3.5 bg-slate-900 border border-slate-850 hover:bg-slate-850 hover:border-slate-800 text-amber-400 font-bold rounded-xl transition duration-200 active:scale-95 flex items-center justify-center gap-1.5"
-                        title="Thoát phòng và quay về trang đăng nhập"
+                        title="ThoÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡t phÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â²ng vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  quay vÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â trang ÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÆ’Ã¢â‚¬Å¾Ãƒâ€ Ã¢â‚¬â„¢ng nhÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â­p"
                     >
-                        Trang chủ
+                        Trang chÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â§
                     </button>
                 </div>
             </div>
@@ -505,7 +528,7 @@ function copyCode() {
 
                 <div class="mb-5">
                     <h2 class="text-lg font-black text-white flex items-center gap-2">
-                        <span class="text-red-500">⚠️</span> Thông báo lỗi
+                        <span class="text-red-500">ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â</span> ThÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´ng bÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡o lÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Âi
                     </h2>
                     <p class="mt-3 text-sm leading-relaxed text-slate-300 bg-slate-950/60 p-4 border border-slate-850 rounded-xl font-semibold">
                         {{ errorMessage }}
@@ -517,7 +540,7 @@ function copyCode() {
                         class="rounded-xl bg-slate-800 border border-slate-700 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-slate-750 active:scale-95 outline-none"
                         @click="closeError"
                     >
-                        Đóng
+                        ÃƒÆ’Ã¢â‚¬Å¾Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ng
                     </button>
                 </div>
             </div>
