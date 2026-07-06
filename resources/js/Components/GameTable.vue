@@ -138,6 +138,18 @@ function isRedCard(card) {
     return card ? ['H', 'D'].includes(card.slice(-1)) : false;
 }
 
+function getTableCardStyle(play) {
+    if (play.is_face_down || !play.card) {
+        return { zIndex: 0 };
+    }
+
+    if (play.is_winner) {
+        return { zIndex: 20 };
+    }
+
+    return { zIndex: Math.max(1, Number(play.play_order || 1)) };
+}
+
 function getPlayerName(playerId) {
     if (String(playerId) === String(props.currentPlayer.id)) {
         return 'BÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂºÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡n';
@@ -587,6 +599,7 @@ defineExpose({ updateHand, addPlayedCard, refreshFromServer });
                                     v-for="play in group.plays"
                                     :key="play.id"
                                     class="winner-mini-card"
+                                    :style="getTableCardStyle(play)"
                                     :class="{
                                         'winner-mini-card--red': isRedCard(play.card),
                                         'winner-mini-card--back': play.is_face_down || !play.card,
@@ -749,7 +762,7 @@ defineExpose({ updateHand, addPlayedCard, refreshFromServer });
 .opponents {
     position: absolute;
     inset: 0;
-    z-index: 10;
+    z-index: 8;
     pointer-events: none;
 }
 
@@ -785,7 +798,7 @@ defineExpose({ updateHand, addPlayedCard, refreshFromServer });
 
 .center-area {
     position: absolute;
-    z-index: 5;
+    z-index: 12;
     inset: 0;
     display: flex;
     align-items: center;
