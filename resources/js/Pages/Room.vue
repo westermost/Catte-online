@@ -2,8 +2,12 @@
 import { ref, watch, onMounted, onUnmounted, computed } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import GameTable from '@/Components/GameTable.vue';
+import LanguagePicker from '@/Components/LanguagePicker.vue';
+import { useLocale } from '@/composables/useLocale';
 import ChatBox from '@/Components/ChatBox.vue';
 import Scoreboard from '@/Components/Scoreboard.vue';
+
+const { msg } = useLocale();
 
 const props = defineProps({
     room: Object,
@@ -46,7 +50,7 @@ const currentRoomPlayer = computed(() => playerList.value.find(p => p.id === pro
 const isNextGameReadyPhase = computed(() => Boolean(roomData.value.next_game_deadline_at));
 const isCurrentPlayerReady = computed(() => Boolean(currentRoomPlayer.value?.ready_for_next_game));
 const readyPlayersCount = computed(() => playerList.value.filter(p => p.ready_for_next_game).length);
-const nextGameLeaderName = computed(() => lastWinner.value?.name || 'ngÃƒÆ’Ã¢â‚¬Â Ãƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Âi thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¯ng vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡n trÃƒÆ’Ã¢â‚¬Â Ãƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Âºc');
+const nextGameLeaderName = computed(() => lastWinner.value?.name || 'previous winner');
 
 onMounted(() => {
     document.addEventListener('keydown', handleModalKeydown);
@@ -133,14 +137,14 @@ function handleModalKeydown(event) {
 }
 
 function showError(message) {
-    errorMessage.value = message || 'LÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Âi';
+    errorMessage.value = message || msg('room.error');
 }
 
 function closeError() {
     errorMessage.value = '';
 }
 
-async function readErrorResponse(response, fallback = 'CÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ lÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Âi xÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â£y ra.') {
+async function readErrorResponse(response, fallback = msg('room.error')) {
     try {
         const data = await response.json();
         return data.error || data.message || fallback;
@@ -210,14 +214,14 @@ async function readyNextGame() {
         });
 
         if (!res.ok) {
-            showError(await readErrorResponse(res, 'KhÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´ng thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€ Ã¢â‚¬â„¢ xÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡c nhÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â­n vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡n mÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Âºi.'));
+            showError(await readErrorResponse(res, msg('room.errorConfirm')));
             return;
         }
 
         await refreshRoomState();
     } catch (e) {
         console.error('Ready next game error:', e);
-        showError('KhÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´ng thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€ Ã¢â‚¬â„¢ kÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¿t nÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“i mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡y chÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â§. Vui lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â²ng thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â­ lÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¡i.');
+        showError(msg('room.errorConnect'));
     }
 }
 
@@ -231,7 +235,7 @@ async function handlePlayCard({ card, face_down }) {
             body: JSON.stringify({ card, face_down }),
         });
         if (!res.ok) {
-            showError(await readErrorResponse(res, 'KhÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´ng thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€ Ã¢â‚¬â„¢ ÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡nh bÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â i.'));
+            showError(await readErrorResponse(res, msg('room.errorPlay')));
         } else {
             const data = await res.json();
             if (!data.card_played) {
@@ -246,7 +250,7 @@ async function handlePlayCard({ card, face_down }) {
         }
     } catch (e) {
         console.error('Play card error:', e);
-        showError('KhÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´ng thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€ Ã¢â‚¬â„¢ kÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¿t nÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“i mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡y chÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â§. Vui lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â²ng thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â­ lÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¡i.');
+        showError(msg('room.errorConnect'));
     }
 }
 
@@ -267,7 +271,7 @@ async function handleClaimTimeout({ retried = false } = {}) {
         });
 
         if (!res.ok) {
-            const message = await readErrorResponse(res, 'KhÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´ng thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€ Ã¢â‚¬â„¢ xÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â­ lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â½ lÃƒÆ’Ã¢â‚¬Â Ãƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â£t hÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¿t giÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â.');
+            const message = await readErrorResponse(res, msg('room.errorTimeout'));
 
             if (message === 'Too early') {
                 if (!retried) {
@@ -290,7 +294,7 @@ async function handleClaimTimeout({ retried = false } = {}) {
     } catch (e) {
         console.error('Claim timeout error:', e);
         if (e.name === 'AbortError') return;
-        showError('KhÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´ng thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€ Ã¢â‚¬â„¢ kÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¿t nÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“i mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡y chÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â§. Vui lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â²ng thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â­ lÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¡i.');
+        showError(msg('room.errorConnect'));
     } finally {
         window.clearTimeout(requestTimer);
         timeoutClaimInFlight = false;
@@ -319,6 +323,7 @@ function copyCode() {
 </script>
 
 <template>
+    <LanguagePicker />
     <div class="min-h-screen bg-slate-950 font-sans text-slate-100 select-none">
         <!-- Game Active -->
         <GameTable
@@ -356,24 +361,24 @@ function copyCode() {
                             <div class="flex items-center gap-2 flex-wrap">
                                 <h1 class="text-2xl font-black text-white tracking-wide">{{ roomData.name }}</h1>
                                 <span class="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-400 rounded-md uppercase">
-                                    {{ isNextGameReadyPhase ? 'SÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Âµn sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â ng vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡n mÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Âºi' : 'PhÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â²ng chÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â' }}
+                                    {{ isNextGameReadyPhase ? msg('room.readyForNext') : msg('room.players') }}
                                 </span>
                                 <span v-if="roomData.thoi_ach_enabled" class="px-2 py-0.5 bg-rose-500/10 border border-rose-500/20 text-[10px] font-bold text-rose-400 rounded-md uppercase">
-                                    ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€ Ã¢â‚¬â„¢Ãƒâ€šÃ‚Â ThÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“i ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âch
+                                    🔄 Change
                                 </span>
                             </div>
                             <p class="text-xs text-slate-500 mt-1">
-                                {{ isNextGameReadyPhase ? `${nextGameLeaderName} sÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â½ ÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“i ÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â§u ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€¦Ã‚Â¸ vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡n mÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Âºi.` : 'ChuÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â©n bÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ sÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Âµn sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â ng ÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€ Ã¢â‚¬â„¢ bÃƒÆ’Ã¢â‚¬Â Ãƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Âºc vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â o trÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â­n ÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¥u Catte kÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ch tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­nh' }}
+                                {{ isNextGameReadyPhase ? msg('room.nextGameLeader', { name: nextGameLeaderName }) : msg('room.getReady') }}
                             </p>
                         </div>
                         
                         <!-- Copy room code -->
                         <div class="flex items-center gap-2">
-                            <span class="text-xs font-semibold text-slate-400">MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ phÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â²ng:</span>
+                            <span class="text-xs font-semibold text-slate-400">{{ msg('room.roomCode') }}</span>
                             <button
                                 @click="copyCode"
                                 class="font-mono font-extrabold text-emerald-400 hover:text-emerald-300 bg-slate-950 px-3.5 py-1.5 rounded-xl border border-slate-800 flex items-center gap-2 transition duration-200 active:scale-95 group"
-                                title="BÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¥m ÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€ Ã¢â‚¬â„¢ sao chÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©p"
+                                :title="msg('room.clickToCopy')"
                             >
                                 <span class="tracking-widest font-black">{{ roomData.code }}</span>
                                 <svg v-if="!copied" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-slate-500 group-hover:text-slate-400 transition">
@@ -393,14 +398,14 @@ function copyCode() {
                 >
                     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                         <div>
-                            <h2 class="text-base font-black text-white">XÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡c nhÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â­n vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡n tiÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¿p theo</h2>
+                            <h2 class="text-base font-black text-white">{{ msg('room.confirmNextGame') }}</h2>
                             <p class="text-xs text-slate-400 mt-1">
-                                {{ readyPlayersCount }} / {{ playerList.length }} ngÃƒÆ’Ã¢â‚¬Â Ãƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Âi ÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ sÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Âµn sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â ng. HÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¿t giÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â, ngÃƒÆ’Ã¢â‚¬Â Ãƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Âi chÃƒÆ’Ã¢â‚¬Â Ãƒâ€šÃ‚Â°a xÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡c nhÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â­n sÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â½ bÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ rÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Âi phÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â²ng.
+                                {{ msg('room.readyStatus', { count: readyPlayersCount, total: playerList.length }) }}
                             </p>
                         </div>
                         <div class="flex items-center gap-3">
                             <div class="px-4 py-2 rounded-2xl bg-slate-950 border border-slate-800 text-center min-w-[92px]">
-                                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">CÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â²n lÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¡i</div>
+                                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">{{ msg('room.remaining') }}</div>
                                 <div class="text-2xl font-black text-amber-400">{{ nextGameSecondsLeft }}</div>
                             </div>
                             <button
@@ -412,7 +417,7 @@ function copyCode() {
                                 :disabled="isCurrentPlayerReady"
                                 @click="readyNextGame"
                             >
-                                {{ isCurrentPlayerReady ? 'ÃƒÆ’Ã¢â‚¬Å¾Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ sÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Âµn sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â ng' : 'BÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¯t ÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â§u vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡n tiÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¿p theo' }}
+                                {{ isCurrentPlayerReady ? 'Ready!' : 'Start Next Game' }}
                             </button>
                         </div>
                     </div>
@@ -422,7 +427,7 @@ function copyCode() {
                 <div class="bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 mb-6 shadow-2xl">
                     <div class="flex items-center justify-between mb-5">
                         <h2 class="font-extrabold text-white text-base flex items-center gap-2">
-                            <span>ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“Ãƒâ€šÃ‚Â¥</span> Danh sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ch bÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â i thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â§
+                            <span>📋</span> {{ msg('room.playerList') }}
                         </h2>
                         <span class="text-xs font-bold px-2 py-0.5 bg-slate-950 border border-slate-800 rounded-md text-slate-400">
                             {{ playerList.length }} / {{ roomData.max_players }}
@@ -446,15 +451,15 @@ function copyCode() {
                                 <div class="flex flex-col">
                                     <span class="font-bold text-white text-sm flex items-center gap-1.5">
                                         {{ player.name }}
-                                        <span v-if="player.id === roomData.owner_player_id" class="text-yellow-500 text-sm" title="ChÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â§ phÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â²ng">ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“</span>
-                                        <span v-if="player.id === currentPlayer?.id" class="px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-[9px] text-emerald-400 font-extrabold rounded">BÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â N</span>
+                                        <span v-if="player.id === roomData.owner_player_id" class="text-yellow-500 text-sm" title="Room Owner">👑</span>
+                                        <span v-if="player.id === currentPlayer?.id" class="px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-[9px] text-emerald-400 font-extrabold rounded">YOU</span>
                                     </span>
                                     <span
                                         v-if="isNextGameReadyPhase"
                                         class="mt-1 text-[10px] font-bold uppercase tracking-wider"
                                         :class="player.ready_for_next_game ? 'text-emerald-400' : 'text-slate-500'"
                                     >
-                                        {{ player.ready_for_next_game ? 'SÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Âµn sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â ng vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡n mÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã‚Âºi' : 'ChÃƒÆ’Ã¢â‚¬Â Ãƒâ€šÃ‚Â°a xÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡c nhÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â­n' }}
+                                        {{ player.ready_for_next_game ? msg('room.ready') : msg('room.notReady') }}
                                     </span>
                                 </div>
                             </div>
@@ -473,7 +478,7 @@ function copyCode() {
                         >
                             <span class="text-xs text-slate-600 font-medium tracking-wide flex items-center gap-2 select-none">
                                 <span class="w-1.5 h-1.5 rounded-full bg-slate-600 animate-ping"></span>
-                                ÃƒÆ’Ã¢â‚¬Å¾Ãƒâ€šÃ‚Âang chÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â bÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â i thÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â§ tham gia...
+                                {{ msg('room.waitingForPlayers') }}
                             </span>
                         </div>
                     </div>
@@ -486,28 +491,28 @@ function copyCode() {
                         @click="startGame"
                         class="px-8 py-3.5 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-slate-950 font-black text-base rounded-xl transition duration-300 transform active:scale-95 shadow-lg shadow-amber-500/10 hover:shadow-amber-500/25"
                     >
-                        ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â½Ãƒâ€šÃ‚Â® BÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¯t ÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â§u!
+                        🎮 {{ msg('room.startGame') }}
                     </button>
                     <button
                         v-if="ownerIsMe && playerList.length < 2 && !isNextGameReadyPhase"
                         disabled
                         class="px-8 py-3.5 bg-slate-900 text-slate-600 font-bold text-sm rounded-xl cursor-not-allowed border border-slate-850"
                     >
-                        ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â³ CÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â§n ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­t nhÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¥t 2 ngÃƒÆ’Ã¢â‚¬Â Ãƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Âi
+                        ⚠️ {{ msg('room.minPlayersNeeded') }}
                     </button>
                     <button
                         @click="leaveRoom"
                         class="px-8 py-3.5 bg-slate-900 border border-slate-850 hover:bg-slate-850 hover:border-slate-800 text-rose-400 font-bold rounded-xl transition duration-200 active:scale-95"
-                        title="RÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Âi phÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â²ng vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  quay lÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â¡i sÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â£nh"
+                        :title="msg('room.leaveTitle')"
                     >
-                        RÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Âi phÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â²ng
+                        {{ msg('room.leaveRoom') }}
                     </button>
                     <button
                         @click="leaveToHome"
                         class="px-8 py-3.5 bg-slate-900 border border-slate-850 hover:bg-slate-850 hover:border-slate-800 text-amber-400 font-bold rounded-xl transition duration-200 active:scale-95 flex items-center justify-center gap-1.5"
-                        title="ThoÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡t phÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â²ng vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  quay vÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â trang ÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ÃƒÆ’Ã¢â‚¬Å¾Ãƒâ€ Ã¢â‚¬â„¢ng nhÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒâ€šÃ‚Â­p"
+                        :title="msg('room.homeTitle')"
                     >
-                        Trang chÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»Ãƒâ€šÃ‚Â§
+                        {{ msg('room.home') }}
                     </button>
                 </div>
             </div>
@@ -526,7 +531,7 @@ function copyCode() {
 
                 <div class="mb-5">
                     <h2 class="text-lg font-black text-white flex items-center gap-2">
-                        <span class="text-red-500">ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â</span> ThÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´ng bÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡o lÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Âi
+                        <span class="text-red-500">⚠️</span> Error
                     </h2>
                     <p class="mt-3 text-sm leading-relaxed text-slate-300 bg-slate-950/60 p-4 border border-slate-850 rounded-xl font-semibold">
                         {{ errorMessage }}
@@ -538,7 +543,7 @@ function copyCode() {
                         class="rounded-xl bg-slate-800 border border-slate-700 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-slate-750 active:scale-95 outline-none"
                         @click="closeError"
                     >
-                        ÃƒÆ’Ã¢â‚¬Å¾Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ng
+                        {{ msg('room.close') }}
                     </button>
                 </div>
             </div>

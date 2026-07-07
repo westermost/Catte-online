@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
+import LanguagePicker from '@/Components/LanguagePicker.vue';
 
 const name = ref('');
 const loading = ref(false);
@@ -15,6 +16,7 @@ function submit() {
 </script>
 
 <template>
+    <LanguagePicker />
     <div class="min-h-screen bg-slate-950 relative overflow-hidden flex items-center justify-center p-4 font-sans select-none">
         <!-- Radial Ambient Glows -->
         <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none"></div>

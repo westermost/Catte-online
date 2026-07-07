@@ -1,6 +1,6 @@
 {
   "node_modules/html2canvas/dist/html2canvas.js": {
-    "file": "assets/html2canvas-Btzz40TQ.js",
+    "file": "assets/html2canvas-DM-RYR61.js",
     "name": "html2canvas",
     "src": "node_modules/html2canvas/dist/html2canvas.js",
     "isDynamicEntry": true,
@@ -18,7 +18,7 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-PCN5pwzs.js",
+    "file": "assets/app-HG_pigGR.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -26,7 +26,7 @@
       "node_modules/html2canvas/dist/html2canvas.js"
     ],
     "css": [
-      "assets/app-eAupbzJW.css",
+      "assets/app-CG31G_Ec.css",
       "assets/app-CI4eDxJ5.css"
     ]
   }

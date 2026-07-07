@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
+import LanguagePicker from '@/Components/LanguagePicker.vue';
 
 const props = defineProps({
     rooms: Array,
@@ -61,6 +62,7 @@ function joinRoom(code) {
 </script>
 
 <template>
+    <LanguagePicker />
     <div class="min-h-screen bg-slate-950 relative overflow-hidden p-4 md:p-6 font-sans text-slate-100 select-none">
         <!-- Radial Ambient Glows -->
         <div class="absolute top-0 right-1/4 w-96 h-96 bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none"></div>

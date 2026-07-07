@@ -165,6 +165,72 @@ UNIQUE constraint `(room_id, seat_position)` áp dụng cho TẤT CẢ rows. Que
 ### Client watchdog cho timeout
 Client có watchdog tự claim timeout lại nếu turn bị stale (`GameTable.vue:294`). Đảm bảo game không bị stuck nếu claim đầu tiên fail.
 
+## i18n & Encoding Rules
+
+### File Encoding Strategy
+- **ALL .js/.vue source files** must be valid UTF-8
+- **Vietnamese text** must be written via Python script (`python3 -c` with `\uXXXX` in source, output as UTF-8 bytes) to avoid tool mojibake
+- **Never** use the `write` file tool or `cat heredoc` for Vietnamese content — they corrupt multi-byte characters
+- **English files** should be pure ASCII (no emoji, no special chars)
+- **Verify after write:** always run `file --mime-encoding <path>` + `head -5 <path>` to confirm
+
+### How to Write Vietnamese Safely
+
+```bash
+# CORRECT: Use python3 with unicode escapes in source, writes proper UTF-8
+python3 -c "
+content = '''export default {
+  title: 'Game B\u00e0i C\u00e1t T\u00ea',
+};
+'''
+with open('path/to/file.js', 'w', encoding='utf-8') as f:
+    f.write(content)
+"
+
+# VERIFY: Must show utf-8 and readable Vietnamese
+file --mime-encoding path/to/file.js  # -> utf-8
+head -3 path/to/file.js               # -> readable Vietnamese with diacritics
+node -e "const m = await import('./file.js'); console.log(m.default.title)"  # -> Game Bài Cát Tê
+```
+
+### What DOESN'T Work (causes mojibake)
+- `write` tool with Vietnamese content → double-encodes UTF-8
+- `cat > file << 'EOF'` with raw Vietnamese → sometimes OK, sometimes corrupts
+- `cat > file << 'EOF'` with `\xNN` hex escapes → interpreted as literal bytes, not UTF-8
+- Copy-paste from broken source → propagates corruption
+
+### i18n Architecture
+
+```
+resources/js/
+├── i18n/
+│   ├── en.js          ← English (pure ASCII, no emoji)
+│   └── vi.js          ← Vietnamese (UTF-8, written via python3)
+├── composables/
+│   └── useLocale.js   ← Single composable, SSR-safe
+```
+
+### useLocale Rules
+- Initialize with `ref('en')` — never read localStorage at module level
+- Guard ALL `localStorage` and `window` access behind `typeof window !== 'undefined'`
+- Export only `msg()` function for string lookups (dot-path with interpolation)
+- `msg()` has automatic English fallback if key missing in current locale
+- **Do NOT** use `t.value.path.to.key` directly — no fallback, renders `undefined` if key missing
+
+### Component Rules
+- **All user-facing strings** must go through `msg('section.key')` or `msg('section.key', { param: value })`
+- **No hardcoded text** in templates or computed properties
+- **No emoji** in source code — use CSS/SVG or entity references if needed
+- Import pattern: `import { useLocale } from '@/composables/useLocale'; const { msg } = useLocale();`
+- `LanguagePicker` component included on all pages (Home, Lobby, Room)
+- Locale persists to localStorage, defaults to 'en'
+
+### Adding a New Language
+1. Create `resources/js/i18n/xx.js` using python3 method above
+2. Add `import xx from '../i18n/xx.js'` in `useLocale.js`
+3. Add to `const locales = { en, vi, xx }`
+4. Update LanguagePicker cycle logic
+
 ## Remaining Work / TODO
 
 1. **Manual QA realtime** — test 2-4 browser tabs: join, start, play, timeout, leave, reconnect
